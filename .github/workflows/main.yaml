@@ -38,6 +38,10 @@ jobs:
       - name: Build
         shell: bash
         run: |
+          # The sniper SDK's clang 11 cannot compile s2sdk's C++20 headers against libstdc++ 10, its gcc 10 can.
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            export CC=gcc CXX=g++
+          fi
           mkdir build && cd build
           git config --global --add safe.directory ..
           python ../configure.py

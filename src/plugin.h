@@ -2,11 +2,13 @@
 #define _INCLUDE_METAMOD_SOURCE_PLUGIN_H_
 
 #include <ISmmPlugin.h>
+#include <engine2/isource2server.h>
+#include <engine2/ivengineserver2.h>
 #include <igameevents.h>
 #include <set>
 #include <string>
 #include "version_gen.h"
-#include "steam/steam_gameserver.h"
+#include "steam/isteamugc.h"
 
 
 class WSCleanerPlugin : public ISmmPlugin, public IMetamodListener
@@ -24,7 +26,6 @@ public:
 						bool loadGame, 
 						bool background);
 
-	KHook::Return<void> Hook_GameServerSteamAPIActivated(IServerGameDLL*);
 	KHook::Return<void> Hook_GameFrame(IServerGameDLL*, bool simulating, bool bFirstTick, bool bLastTick);
 public:
 	const char *GetAuthor() { return PLUGIN_AUTHOR; }
@@ -36,12 +37,10 @@ public:
 	const char *GetDate() { return __DATE__; }
 	const char *GetLogTag() { return PLUGIN_LOGTAG; }
 protected:
-	KHook::Virtual<IServerGameDLL, void> m_GameServerSteamAPIActivated;
 	KHook::Virtual<IServerGameDLL, void, bool, bool, bool> m_GameFrame;
 };
 
 extern WSCleanerPlugin g_ThisPlugin;
-extern CSteamGameServerAPIContext g_SteamAPI;
 
 PLUGIN_GLOBALVARS();
 

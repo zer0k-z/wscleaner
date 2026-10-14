@@ -4,15 +4,15 @@
 #include "hostmap.h"
 #include "workshop_manager.h"
 #include "icommandline.h"
-#include "engine/igameeventsystem.h"
+#include "engine2/igameeventsystem.h"
 #include "networksystem/inetworkmessages.h"
-#include "networksystem/netmessage.h"
+#include "steam/isteamugc.h"
+#include "steam/isteamutils.h"
 #include "usermessages.pb.h"
 
 WSHostMapPlugin g_ThisPlugin;
 PLUGIN_EXPOSE(WSHostMapPlugin, g_ThisPlugin);
 
-static CSteamGameServerAPIContext s_SteamAPI;
 static IGameEventSystem *s_pGameEventSystem = nullptr;
 
 CConVar<float> wshostmap_progress_interval("wshostmap_progress_interval", FCVAR_NONE, "Seconds between download progress messages in chat.", 5.0f, true, 1.0f, false, 0.0f);
@@ -40,8 +40,8 @@ static const double kUnwatchedTimeout = 600.0;
 
 static void ResetRequest()
 {
-	if (s_Request.hQuery != k_UGCQueryHandleInvalid && s_SteamAPI.SteamUGC())
-		s_SteamAPI.SteamUGC()->ReleaseQueryUGCRequest(s_Request.hQuery);
+	if (s_Request.hQuery != k_UGCQueryHandleInvalid && SteamGameServerUGC())
+		SteamGameServerUGC()->ReleaseQueryUGCRequest(s_Request.hQuery);
 	s_Request.state = EHostState::Idle;
 	s_Request.fileId = 0;
 	s_Request.hQuery = k_UGCQueryHandleInvalid;
@@ -126,7 +126,7 @@ static void StartRequest(CPlayerSlot slot, const char *arguments)
 		ChatPrintAll("Usage: !hostmap <workshop id>");
 		return;
 	}
-	ISteamUGC *pUGC = s_SteamAPI.SteamUGC();
+	ISteamUGC *pUGC = SteamGameServerUGC();
 	if (!pUGC)
 	{
 		ChatPrintAll("Steam is not available yet, try again in a moment.");
@@ -153,8 +153,8 @@ static void StartRequest(CPlayerSlot slot, const char *arguments)
 
 static void UpdateQuery()
 {
-	ISteamUtils *pUtils = s_SteamAPI.SteamGameServerUtils();
-	ISteamUGC *pUGC = s_SteamAPI.SteamUGC();
+	ISteamUtils *pUtils = SteamGameServerUtils();
+	ISteamUGC *pUGC = SteamGameServerUGC();
 	if (!pUtils || !pUGC)
 		return;
 	bool bFailed = false;
@@ -204,7 +204,7 @@ static void UpdateQuery()
 
 static void UpdateDownload()
 {
-	ISteamUGC *pUGC = s_SteamAPI.SteamUGC();
+	ISteamUGC *pUGC = SteamGameServerUGC();
 	if (!pUGC)
 		return;
 	double now = Plat_FloatTime();
@@ -246,7 +246,6 @@ static void UpdateDownload()
 }
 
 WSHostMapPlugin::WSHostMapPlugin() :
-	m_GameServerSteamAPIActivated(&IServerGameDLL::GameServerSteamAPIActivated, this, &WSHostMapPlugin::Hook_GameServerSteamAPIActivated, nullptr),
 	m_GameFrame(&IServerGameDLL::GameFrame, this, nullptr, &WSHostMapPlugin::Hook_GameFrame),
 	m_DispatchConCommand(&ICvar::DispatchConCommand, this, &WSHostMapPlugin::Hook_DispatchConCommand, nullptr)
 {
@@ -266,11 +265,8 @@ bool WSHostMapPlugin::Load(PluginId id, ISmmAPI *ismm, char *error, size_t maxle
 	GET_V_IFACE_CURRENT(GetEngineFactory, g_pNetworkMessages, INetworkMessages, NETWORKMESSAGES_INTERFACE_VERSION);
 	GET_V_IFACE_CURRENT(GetEngineFactory, s_pGameEventSystem, IGameEventSystem, GAMEEVENTSYSTEM_INTERFACE_VERSION);
 	g_SMAPI->AddListener(this, this);
-	if (late)
-		s_SteamAPI.Init();
 	ConVar_Register();
 
-	m_GameServerSteamAPIActivated.Add(g_pSource2Server);
 	m_GameFrame.Add(g_pSource2Server);
 	m_DispatchConCommand.Add(g_pCVar);
 	return true;
@@ -278,7 +274,6 @@ bool WSHostMapPlugin::Load(PluginId id, ISmmAPI *ismm, char *error, size_t maxle
 
 bool WSHostMapPlugin::Unload(char *error, size_t maxlen)
 {
-	m_GameServerSteamAPIActivated.Remove(g_pSource2Server);
 	m_GameFrame.Remove(g_pSource2Server);
 	m_DispatchConCommand.Remove(g_pCVar);
 	ResetRequest();
@@ -288,13 +283,6 @@ bool WSHostMapPlugin::Unload(char *error, size_t maxlen)
 void WSHostMapPlugin::AllPluginsLoaded()
 {
 	g_pEngineServer->ServerCommand("exec wshostmap/wshostmap");
-}
-
-KHook::Return<void> WSHostMapPlugin::Hook_GameServerSteamAPIActivated(IServerGameDLL*)
-{
-	if (!s_SteamAPI.SteamUGC())
-		s_SteamAPI.Init();
-	return { KHook::Action::Ignore };
 }
 
 KHook::Return<void> WSHostMapPlugin::Hook_GameFrame(IServerGameDLL*, bool simulating, bool bFirstTick, bool bLastTick)

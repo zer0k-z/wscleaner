@@ -1,10 +1,11 @@
 #include "plugin.h"
 #include "addons.h"
 #include "workshop_manager.h"
-#include "filesystem.h"
-#include "engine/IEngineService.h"
+#include "filesystem/ifilesystem.h"
+#include "engine2/iengineservicemgr.h"
 #include "icommandline.h"
-#include "KeyValues.h"
+#include "tier0/keyvalues.h"
+#include "tier0/splitstring.h"
 
 CConVar<CUtlString> wscleaner_exclude("wscleaner_exclude", FCVAR_NONE, "Comma-separated list of addons that will not be deleted by the plugin.", "");
 
@@ -213,7 +214,7 @@ static void GetWhitelistedAddons(const char *currentMap, std::set<uint64> &outLi
 
 void CleanupWorkshopAddons(const char *currentMap)
 {
-	ISteamUGC *pUGC = g_SteamAPI.SteamUGC();
+	ISteamUGC *pUGC = SteamGameServerUGC();
 	if (!pUGC || !g_pFullFileSystem)
 		return;
 

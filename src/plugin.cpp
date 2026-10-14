@@ -1,12 +1,11 @@
 #include <stdio.h>
 #include "plugin.h"
 #include "addons.h"
-#include "filesystem.h"
-#include "engine/IEngineService.h"
+#include "filesystem/ifilesystem.h"
+#include "engine2/iengineservicemgr.h"
 #include "icommandline.h"
 #include <string>
 
-CSteamGameServerAPIContext g_SteamAPI;
 WSCleanerPlugin g_ThisPlugin;
 PLUGIN_EXPOSE(WSCleanerPlugin, g_ThisPlugin);
 
@@ -17,7 +16,6 @@ static double s_flCleanupTime = 0.0;
 static std::string s_CurrentMap;
 
 WSCleanerPlugin::WSCleanerPlugin() :
-	m_GameServerSteamAPIActivated(&IServerGameDLL::GameServerSteamAPIActivated, this, &WSCleanerPlugin::Hook_GameServerSteamAPIActivated, nullptr),
 	m_GameFrame(&IServerGameDLL::GameFrame, this, nullptr, &WSCleanerPlugin::Hook_GameFrame)
 {
 }
@@ -37,18 +35,14 @@ bool WSCleanerPlugin::Load(PluginId id, ISmmAPI *ismm, char *error, size_t maxle
 	GET_V_IFACE_ANY(GetFileSystemFactory, g_pFullFileSystem, IFileSystem, FILESYSTEM_INTERFACE_VERSION);
 	GET_V_IFACE_ANY(GetEngineFactory, g_pEngineServiceMgr, IEngineServiceMgr, ENGINESERVICEMGR_INTERFACE_VERSION);
 	g_SMAPI->AddListener( this, this );
-	if (late)
-		g_SteamAPI.Init();
 	ConVar_Register();
 
-	m_GameServerSteamAPIActivated.Add(g_pSource2Server);
 	m_GameFrame.Add(g_pSource2Server);
 	return true;
 }
 
 bool WSCleanerPlugin::Unload(char *error, size_t maxlen)
 {
-	m_GameServerSteamAPIActivated.Remove(g_pSource2Server);
 	m_GameFrame.Remove(g_pSource2Server);
 	return true;
 }
@@ -76,12 +70,5 @@ KHook::Return<void> WSCleanerPlugin::Hook_GameFrame(IServerGameDLL*, bool simula
 		s_flCleanupTime = 0.0;
 		CleanupWorkshopAddons(s_CurrentMap.c_str());
 	}
-	return { KHook::Action::Ignore };
-}
-
-KHook::Return<void> WSCleanerPlugin::Hook_GameServerSteamAPIActivated(IServerGameDLL*)
-{
-	if (!g_SteamAPI.SteamUGC())
-		g_SteamAPI.Init();
 	return { KHook::Action::Ignore };
 }

@@ -1,12 +1,12 @@
 #include <ISmmPlugin.h>
-#include "eiface.h"
+#include "engine2/isource2server.h"
 #include "interfaces/interfaces.h"
 #include "steam/isteamugc.h"
 #include "workshop_manager.h"
 #include "rtti.h"
-#include "tier1/utlmap.h"
-#include "tier1/utlstring.h"
-#include "tier1/bufferstring.h"
+#include "tier0/utlmap.h"
+#include "tier0/utlstring.h"
+#include "tier0/buffer_string.h"
 
 // Layout reversed from server.dll and libserver.so. The class is a CBaseGameSystem with an IUGCAddonPathResolver
 // at +0x10; only the members this plugin touches are spelled out.
@@ -53,8 +53,16 @@ static_assert(sizeof(RequestedMap_t) == 9800, "RequestedMap_t layout drifted fro
 static_assert(offsetof(RequestedMap_t, m_hQuery) == 9792, "RequestedMap_t layout drifted from the engine's");
 static_assert(offsetof(RequestedMap_t, m_details.m_rtimeUpdated) == 8180, "RequestedMap_t layout drifted from the engine's");
 #endif
+// The SDK's CUtlOrderedMap is not standard layout, but the class has no virtuals or bases, so offsetof is exact.
+#ifdef COMPILER_GCC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
 static_assert(offsetof(CDedicatedServerWorkshopManager, m_mapLoadedWorkshopMaps) == 0x98, "workshop manager layout drifted");
 static_assert(offsetof(CDedicatedServerWorkshopManager, m_nRequestedSharedFileId) == 0xE8, "workshop manager layout drifted");
+#ifdef COMPILER_GCC
+#pragma GCC diagnostic pop
+#endif
 static_assert(sizeof(CDedicatedServerWorkshopManager) == 0x100, "workshop manager layout drifted");
 
 PLUGIN_GLOBALVARS();

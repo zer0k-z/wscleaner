@@ -2,9 +2,10 @@
 #define _INCLUDE_WSHOSTMAP_PLUGIN_H_
 
 #include <ISmmPlugin.h>
+#include <engine2/isource2server.h>
+#include <engine2/ivengineserver2.h>
 #include "version_gen.h"
-#include "icvar.h"
-#include "steam/steam_gameserver.h"
+#include "tier0/icvar.h"
 
 // Optional companion plugin: lets anyone type "!hostmap <id>" in chat to host a workshop map, the same way
 // the host_workshop_map console command does, with the item's details and download progress shown in chat.
@@ -17,7 +18,6 @@ public:
 	bool Unload(char *error, size_t maxlen);
 	void AllPluginsLoaded();
 
-	KHook::Return<void> Hook_GameServerSteamAPIActivated(IServerGameDLL*);
 	KHook::Return<void> Hook_GameFrame(IServerGameDLL*, bool simulating, bool bFirstTick, bool bLastTick);
 	KHook::Return<void> Hook_DispatchConCommand(ICvar*, ConCommandRef cmd, const CCommandContext &ctx, const CCommand &args);
 public:
@@ -30,7 +30,6 @@ public:
 	const char *GetDate() { return __DATE__; }
 	const char *GetLogTag() { return "WSHostMap"; }
 protected:
-	KHook::Virtual<IServerGameDLL, void> m_GameServerSteamAPIActivated;
 	KHook::Virtual<IServerGameDLL, void, bool, bool, bool> m_GameFrame;
 	KHook::Virtual<ICvar, void, ConCommandRef, const CCommandContext &, const CCommand &> m_DispatchConCommand;
 };
